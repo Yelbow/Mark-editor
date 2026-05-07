@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mark Editor</title>
+<style>
+  *{box-sizing:border-box}
+  body{font:16px/1.8 Georgia,serif;max-width:680px;margin:24px auto;padding:0 16px;color:#111}
+  h2{font-size:14px;font-family:monospace;letter-spacing:2px;text-transform:uppercase;color:#888;font-weight:normal;margin:0 0 8px}
+  #pasteArea{width:100%;height:100px;padding:10px;border:1px solid #ddd;border-radius:6px;font:15px/1.6 Georgia,serif;resize:vertical;color:#111}
+  #loadBtn{margin-top:8px;padding:8px 18px;background:#111;color:#fff;border:none;border-radius:5px;cursor:pointer;font:13px monospace}
+  #editorWrap{display:none;margin-top:24px}
+  #wrap{position:relative}
+  #doc{padding:16px;border:1px solid #ddd;border-radius:6px;cursor:text;user-select:text;-webkit-user-select:text;line-height:1.8}
+  .rework{background:#fff0e0;border-bottom:2px solid #f60}
+  .replace{background:#e8f0ff;border-bottom:2px solid #36f}
+  #popup{display:none;position:absolute;background:#fff;border:1px solid #ccc;border-radius:6px;padding:10px;box-shadow:0 4px 16px #0002;z-index:9;min-width:240px}
+  #popup small{display:block;color:#888;font-size:11px;margin-bottom:6px}
+  #pinput{width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:14px Georgia,serif}
+  #popup button{margin-top:6px;padding:5px 14px;border:none;border-radius:4px;background:#111;color:#fff;font:12px monospace;cursor:pointer}
+  #marks{margin-top:16px;font-size:13px}
+  .mark-item{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #eee}
+  .tag{font:11px monospace;padding:2px 6px;border-radius:3px;color:#fff;white-space:nowrap}
+  .tag.r{background:#f60}.tag.p{background:#36f}
+  .mark-text{flex:1;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+  .del{cursor:pointer;color:#bbb;font-size:18px;padding:0 4px}
+  #actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .btn{padding:8px 16px;border:none;border-radius:5px;cursor:pointer;font:13px monospace}
+  #btnSubmit{background:#111;color:#fff}
+  #btnCopy{background:#eee;display:none}
+  #btnReset{background:#eee;display:none}
+  #output{margin-top:10px;font:12px monospace;background:#f5f5f5;padding:12px;border-radius:5px;white-space:pre-wrap;display:none}
+  #hint{font-size:12px;color:#aaa;margin-top:10px;font-family:monospace}
+</style>
+</head>
+<body>
+
+<h2>Mark Editor</h2>
+
+<div id="inputArea">
+  <textarea id="pasteArea" placeholder="Plak hier de tekst van Claude..."></textarea>
+  <button id="loadBtn" onclick="loadText()">Laad tekst</button>
+</div>
+
+<div id="editorWrap">
+  <div id="wrap">
+    <div id="doc"></div>
+    <div id="popup">
+      <small>Leeg + OK = rework &nbsp;|&nbsp; Typ tekst + OK = replace</small>
+      <input id="pinput" placeholder="Comment of vervanging..." />
+      <button onclick="addMark()">OK</button>
+    </div>
+  </div>
+
+  <div id="marks"></div>
+
+  <div id="actions">
+    <button class="btn" id="btnSubmit" onclick="submit()">Submit marks</button>
+    <button class="btn" id="btnCopy" onclick="copyOut()">Kopieer</button>
+    <button class="btn" id="btnReset" onclick="reset()">Opnieuw</button>
+  </div>
+  <div id="output"></div>
+  <div id="hint">Selecteer tekst om te markeren</div>
+</div>
+
+<script>
+let marks = [], sel = null, selTimer = null;
+
+function loadText() {
+  const txt = document.getElementById('pasteArea').value.trim();
+  if (!txt) return;
+  document.getElementById('doc').textContent = txt;
+  document.getElementById('editorWrap').style.display = 'block';
+  document.getElementById('inputArea').style.display = 'none';
+  marks = [];
+  renderMarks();
+}
+
+document.addEventListener('selectionchange', () => {
+  clearTimeout(selTimer);
+  selTimer = setTimeout(() => {
+    const s = window.getSelection();
+    if (!s || s.isCollapsed) return;
+    const txt = s.toString().trim();
+    if (!txt) return;
+    const doc = document.getElementById('doc');
+    if (!doc.contains(s.anchorNode)) return;
+    sel = txt;
+    const range = s.getRangeAt(0);
+    const rr = range.getBoundingClientRect();
+    const wr = document.getElementById('wrap').getBoundingClientRect();
+    const p = document.getElementById('popup');
+    p.style.display = 'block';
+    p.style.top = (rr.bottom - wr.top + window.scrollY + 6) + 'px';
+    p.style.left = Math.max(0, Math.min(rr.left - wr.left, wr.width - 260)) + 'px';
+    document.getElementById('pinput').value = '';
+    setTimeout(() => document.getElementById('pinput').focus(), 80);
+  }, 400);
+});
+
+document.getElementById('pinput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); addMark(); }
+  if (e.key === 'Escape') { closePop(); }
+});
+
+document.addEventListener('mousedown', e => {
+  if (!document.getElementById('popup').contains(e.target)) closePop();
+});
+
+document.addEventListener('touchstart', e => {
+  if (!document.getElementById('popup').contains(e.target) && e.target.id !== 'pinput') closePop();
+}, { passive: true });
+
+function addMark() {
+  if (!sel) return;
+  const val = document.getElementById('pinput').value.trim();
+  const type = val ? 'replace' : 'rework';
+  marks.push({ id: Date.now(), type, text: sel, comment: val || null });
+  highlight(sel, type);
+  closePop();
+  renderMarks();
+}
+
+function highlight(txt, type) {
+  const doc = document.getElementById('doc');
+  doc.innerHTML = doc.innerHTML.replace(txt, `<span class="${type}">${txt}</span>`);
+}
+
+function closePop() {
+  document.getElementById('popup').style.display = 'none';
+  window.getSelection()?.removeAllRanges();
+  sel = null;
+}
+
+function removeMark(id) {
+  marks = marks.filter(m => m.id !== id);
+  renderMarks();
+}
+
+function renderMarks() {
+  const el = document.getElementById('marks');
+  if (!marks.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<strong style="font-size:12px;font-family:monospace">Marks (' + marks.length + ')</strong>' +
+    marks.map(m => `<div class="mark-item">
+      <span class="tag ${m.type === 'rework' ? 'r' : 'p'}">${m.type}</span>
+      <span class="mark-text">"${m.text.slice(0, 60)}"${m.comment ? ' → "' + m.comment + '"' : ''}</span>
+      <span class="del" onclick="removeMark(${m.id})">×</span>
+    </div>`).join('');
+}
+
+function submit() {
+  if (!marks.length) return;
+  const lines = marks.map((m, i) => m.type === 'rework'
+    ? `${i + 1}. REWORK: "${m.text}"`
+    : `${i + 1}. REPLACE: "${m.text}" → "${m.comment}"`).join('\n');
+  const out = 'MARKS:\n' + lines;
+  document.getElementById('output').textContent = out;
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('btnCopy').style.display = 'inline-block';
+  document.getElementById('btnReset').style.display = 'inline-block';
+  window._out = out;
+}
+
+function copyOut() {
+  navigator.clipboard.writeText(window._out || '');
+  document.getElementById('btnCopy').textContent = 'Gekopieerd!';
+  setTimeout(() => document.getElementById('btnCopy').textContent = 'Kopieer', 2000);
+}
+
+function reset() {
+  document.getElementById('editorWrap').style.display = 'none';
+  document.getElementById('inputArea').style.display = 'block';
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('output').style.display = 'none';
+  document.getElementById('btnCopy').style.display = 'none';
+  document.getElementById('btnReset').style.display = 'none';
+  marks = [];
+}
+</script>
+</body>
+</html>

@@ -5,177 +5,326 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mark Editor</title>
 <style>
-  *{box-sizing:border-box}
-  body{font:16px/1.8 Georgia,serif;max-width:680px;margin:24px auto;padding:0 16px;color:#111}
-  h2{font-size:14px;font-family:monospace;letter-spacing:2px;text-transform:uppercase;color:#888;font-weight:normal;margin:0 0 8px}
-  #pasteArea{width:100%;height:100px;padding:10px;border:1px solid #ddd;border-radius:6px;font:15px/1.6 Georgia,serif;resize:vertical;color:#111}
-  #loadBtn{margin-top:8px;padding:8px 18px;background:#111;color:#fff;border:none;border-radius:5px;cursor:pointer;font:13px monospace}
-  #editorWrap{display:none;margin-top:24px}
-  #wrap{position:relative}
-  #doc{padding:16px;border:1px solid #ddd;border-radius:6px;cursor:text;user-select:text;-webkit-user-select:text;line-height:1.8}
-  .rework{background:#fff0e0;border-bottom:2px solid #f60}
-  .replace{background:#e8f0ff;border-bottom:2px solid #36f}
-  #popup{display:none;position:absolute;background:#fff;border:1px solid #ccc;border-radius:6px;padding:10px;box-shadow:0 4px 16px #0002;z-index:9;min-width:240px}
-  #popup small{display:block;color:#888;font-size:11px;margin-bottom:6px}
-  #pinput{width:100%;padding:6px 8px;border:1px solid #ccc;border-radius:4px;font:14px Georgia,serif}
-  #popup button{margin-top:6px;padding:5px 14px;border:none;border-radius:4px;background:#111;color:#fff;font:12px monospace;cursor:pointer}
-  #marks{margin-top:16px;font-size:13px}
-  .mark-item{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #eee}
-  .tag{font:11px monospace;padding:2px 6px;border-radius:3px;color:#fff;white-space:nowrap}
-  .tag.r{background:#f60}.tag.p{background:#36f}
-  .mark-text{flex:1;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-  .del{cursor:pointer;color:#bbb;font-size:18px;padding:0 4px}
-  #actions{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
-  .btn{padding:8px 16px;border:none;border-radius:5px;cursor:pointer;font:13px monospace}
-  #btnSubmit{background:#111;color:#fff}
-  #btnCopy{background:#eee;display:none}
-  #btnReset{background:#eee;display:none}
-  #output{margin-top:10px;font:12px monospace;background:#f5f5f5;padding:12px;border-radius:5px;white-space:pre-wrap;display:none}
-  #hint{font-size:12px;color:#aaa;margin-top:10px;font-family:monospace}
+:root {
+  --bg:#ffffff; --surface:#f6f6f4; --border:#e2e2de;
+  --text:#1a1a1a; --muted:#999; --popup:#ffffff;
+  --shadow:0 8px 32px rgba(0,0,0,0.12);
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#111110; --surface:#1c1c1b; --border:#2e2e2c;
+  --text:#e8e4dc; --muted:#666; --popup:#1f1f1e;
+  --shadow:0 8px 32px rgba(0,0,0,0.5);
+}}
+[data-theme=dark]{--bg:#111110;--surface:#1c1c1b;--border:#2e2e2c;--text:#e8e4dc;--muted:#666;--popup:#1f1f1e;--shadow:0 8px 32px rgba(0,0,0,0.5)}
+[data-theme=light]{--bg:#ffffff;--surface:#f6f6f4;--border:#e2e2de;--text:#1a1a1a;--muted:#999;--popup:#ffffff;--shadow:0 8px 32px rgba(0,0,0,0.12)}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-width:720px;margin:0 auto;padding:28px 18px;transition:background .2s,color .2s}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.wordmark{font:700 11px/1 monospace;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:6px 11px;cursor:pointer;color:var(--muted);font-size:15px;transition:border-color .15s}
+.theme-btn:hover{border-color:var(--text)}
+
+/* Input phase */
+#inputPhase textarea{width:100%;min-height:160px;padding:14px;border:1px solid var(--border);border-radius:8px;font:15px/1.7 Georgia,serif;background:var(--surface);color:var(--text);resize:vertical;outline:none;transition:border-color .15s}
+#inputPhase textarea:focus{border-color:var(--text)}
+#inputPhase textarea::placeholder{color:var(--muted)}
+.load-btn{margin-top:10px;padding:11px 22px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font:13px monospace;cursor:pointer;letter-spacing:.5px;min-height:44px;transition:opacity .15s}
+.load-btn:hover{opacity:.85}
+
+/* Editor phase */
+#editorPhase{display:none}
+#wrap{position:relative}
+#doc{padding:22px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text;cursor:text;line-height:1.8}
+#doc h1{font-size:1.5em;margin:0 0 12px}
+#doc h2{font-size:1.25em;margin:14px 0 8px}
+#doc h3{font-size:1.1em;margin:12px 0 6px}
+#doc p{margin-bottom:10px}
+#doc p:last-child{margin-bottom:0}
+#doc ul,#doc ol{padding-left:22px;margin-bottom:10px}
+#doc li{margin-bottom:3px}
+#doc strong{font-weight:700}
+#doc em{font-style:italic}
+
+/* Mark highlights */
+.mark{border-radius:2px;cursor:pointer;transition:opacity .1s}
+.mark:hover{opacity:.8}
+.mark-rework{background:rgba(249,115,22,.15);border-bottom:2px solid #f97316}
+.mark-replace{background:rgba(59,130,246,.15);border-bottom:2px solid #3b82f6}
+.mark-vaag{background:rgba(234,179,8,.18);border-bottom:2px solid #eab308}
+.mark-stem{background:rgba(168,85,247,.15);border-bottom:2px solid #a855f7}
+
+/* Popup */
+#popup{display:none;position:absolute;background:var(--popup);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow);z-index:100;width:268px}
+.popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mtype-btn{padding:11px 6px;border:none;border-radius:6px;cursor:pointer;font:12px monospace;letter-spacing:.3px;min-height:44px;color:#fff;transition:opacity .15s}
+.mtype-btn:hover{opacity:.88}
+.mtype-btn.rework{background:#f97316}
+.mtype-btn.replace{background:#3b82f6}
+.mtype-btn.vaag{background:#eab308;color:#111}
+.mtype-btn.stem{background:#a855f7}
+#replaceWrap{display:none;margin-top:8px}
+#replaceWrap input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font:14px Georgia,serif;background:var(--bg);color:var(--text);outline:none}
+#replaceWrap input:focus{border-color:#3b82f6}
+#replaceOK{margin-top:6px;width:100%;padding:8px;background:#3b82f6;color:#fff;border:none;border-radius:5px;font:12px monospace;cursor:pointer;min-height:36px}
+.popup-cancel{display:block;text-align:center;margin-top:8px;font:11px monospace;color:var(--muted);cursor:pointer;letter-spacing:.5px}
+.popup-cancel:hover{color:var(--text)}
+
+/* Marks list */
+#marksList{margin-top:14px}
+.ml-header{font:11px monospace;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px}
+.mark-row{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border)}
+.mark-row:last-child{border-bottom:none}
+.mtag{font:10px monospace;padding:3px 7px;border-radius:3px;color:#fff;white-space:nowrap;margin-top:3px}
+.mtag.rework{background:#f97316}
+.mtag.replace{background:#3b82f6}
+.mtag.vaag{background:#eab308;color:#111}
+.mtag.stem{background:#a855f7}
+.mcontent{flex:1;min-width:0}
+.mpreview{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mcomment{font-size:13px;color:var(--text);margin-top:2px}
+.medit-input{display:none;width:100%;padding:5px 8px;margin-top:5px;border:1px solid var(--border);border-radius:4px;font:13px Georgia,serif;background:var(--bg);color:var(--text);outline:none}
+.medit-input:focus{border-color:var(--text)}
+.mbtns{display:flex;gap:4px;flex-shrink:0}
+.mibtn{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 8px;cursor:pointer;font:11px monospace;color:var(--muted);min-height:30px;transition:all .15s}
+.mibtn:hover{color:var(--text);border-color:var(--text)}
+.mibtn.del:hover{color:#ef4444;border-color:#ef4444}
+
+/* Actions */
+#actionsBar{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.abtn{padding:10px 18px;border:none;border-radius:6px;cursor:pointer;font:13px monospace;min-height:44px;transition:all .15s;letter-spacing:.3px}
+.abtn:disabled{opacity:.35;cursor:default}
+.abtn-primary{background:var(--text);color:var(--bg)}
+.abtn-primary:not(:disabled):hover{opacity:.85}
+.abtn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.abtn-secondary:hover{border-color:var(--text)}
+.abtn-success{background:#22c55e;color:#fff}
+
+#output{display:none;margin-top:12px;font:12px/1.7 monospace;background:var(--surface);border:1px solid var(--border);padding:14px;border-radius:8px;white-space:pre-wrap;color:var(--text)}
 </style>
 </head>
 <body>
 
-<h2>Mark Editor</h2>
-
-<div id="inputArea">
-  <textarea id="pasteArea" placeholder="Plak hier de tekst van Claude..."></textarea>
-  <button id="loadBtn" onclick="loadText()">Laad tekst</button>
+<div class="topbar">
+  <span class="wordmark">Mark Editor</span>
+  <button class="theme-btn" onclick="toggleTheme()" title="Wissel thema">◐</button>
 </div>
 
-<div id="editorWrap">
+<div id="inputPhase">
+  <textarea id="pasteArea" placeholder="Plak hier de tekst van Claude. Markdown wordt ondersteund (# koppen, **vet**, _cursief_, lijsten)."></textarea>
+  <button class="load-btn" onclick="loadText()">Laad tekst →</button>
+</div>
+
+<div id="editorPhase">
   <div id="wrap">
     <div id="doc"></div>
     <div id="popup">
-      <small>Leeg + OK = rework &nbsp;|&nbsp; Typ tekst + OK = replace</small>
-      <input id="pinput" placeholder="Comment of vervanging..." />
-      <button onclick="addMark()">OK</button>
+      <div class="popup-grid">
+        <button class="mtype-btn rework" onclick="applyMark('rework')">Rework</button>
+        <button class="mtype-btn replace" onclick="showReplace()">Replace</button>
+        <button class="mtype-btn vaag" onclick="applyMark('vaag')">Vaag</button>
+        <button class="mtype-btn stem" onclick="applyMark('stem')">Niet mijn stem</button>
+      </div>
+      <div id="replaceWrap">
+        <input id="replaceInput" placeholder="Vervanging typen..." onkeydown="onReplaceKey(event)">
+        <button id="replaceOK" onclick="applyMark('replace')">OK</button>
+      </div>
+      <span class="popup-cancel" onclick="closePop()">annuleer</span>
     </div>
   </div>
 
-  <div id="marks"></div>
+  <div id="marksList"></div>
 
-  <div id="actions">
-    <button class="btn" id="btnSubmit" onclick="submit()">Submit marks</button>
-    <button class="btn" id="btnCopy" onclick="copyOut()">Kopieer</button>
-    <button class="btn" id="btnReset" onclick="reset()">Opnieuw</button>
+  <div id="actionsBar">
+    <button class="abtn abtn-primary" id="btnSubmit" onclick="submitMarks()" disabled>Submit marks</button>
+    <button class="abtn abtn-secondary" id="btnCopy" style="display:none" onclick="copyOut()">Kopieer</button>
+    <button class="abtn abtn-secondary" onclick="reset()">Opnieuw</button>
   </div>
+
   <div id="output"></div>
-  <div id="hint">Selecteer tekst om te markeren</div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script>
-let marks = [], sel = null, selTimer = null;
+let marks = [], pending = null;
 
+// Theme
+function toggleTheme() {
+  const dt = document.documentElement.dataset;
+  const sys = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  if (!dt.theme) dt.theme = sys === 'dark' ? 'light' : 'dark';
+  else if (dt.theme === 'dark') dt.theme = 'light';
+  else delete dt.theme;
+}
+
+// Load
 function loadText() {
   const txt = document.getElementById('pasteArea').value.trim();
   if (!txt) return;
-  document.getElementById('doc').textContent = txt;
-  document.getElementById('editorWrap').style.display = 'block';
-  document.getElementById('inputArea').style.display = 'none';
-  marks = [];
-  renderMarks();
+  document.getElementById('doc').innerHTML = marked.parse(txt);
+  document.getElementById('inputPhase').style.display = 'none';
+  document.getElementById('editorPhase').style.display = 'block';
 }
 
+// Selection — fires on all platforms including iOS
 document.addEventListener('selectionchange', () => {
-  clearTimeout(selTimer);
-  selTimer = setTimeout(() => {
-    const s = window.getSelection();
-    if (!s || s.isCollapsed) return;
-    const txt = s.toString().trim();
-    if (!txt) return;
-    const doc = document.getElementById('doc');
-    if (!doc.contains(s.anchorNode)) return;
-    sel = txt;
-    const range = s.getRangeAt(0);
-    const rr = range.getBoundingClientRect();
-    const wr = document.getElementById('wrap').getBoundingClientRect();
-    const p = document.getElementById('popup');
-    p.style.display = 'block';
-    p.style.top = (rr.bottom - wr.top + window.scrollY + 6) + 'px';
-    p.style.left = Math.max(0, Math.min(rr.left - wr.left, wr.width - 260)) + 'px';
-    document.getElementById('pinput').value = '';
-    setTimeout(() => document.getElementById('pinput').focus(), 80);
-  }, 400);
+  const s = window.getSelection();
+  if (!s || s.isCollapsed || !s.rangeCount) return;
+  const txt = s.toString().trim();
+  if (!txt) return;
+  const doc = document.getElementById('doc');
+  if (!doc.contains(s.anchorNode)) return;
+
+  const range = s.getRangeAt(0).cloneRange();
+  const rr = range.getBoundingClientRect();
+  const wr = document.getElementById('wrap').getBoundingClientRect();
+
+  pending = { txt, range };
+
+  // Always below selection; flip up if bottom of screen
+  let top = rr.bottom - wr.top + window.scrollY + 8;
+  if (window.innerHeight - rr.bottom < 200) top = rr.top - wr.top + window.scrollY - 210;
+  const left = Math.max(0, Math.min(rr.left - wr.left, wr.width - 272));
+
+  const p = document.getElementById('popup');
+  p.style.top = top + 'px';
+  p.style.left = left + 'px';
+  document.getElementById('replaceWrap').style.display = 'none';
+  document.getElementById('replaceInput').value = '';
+  p.style.display = 'block';
 });
 
-document.getElementById('pinput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); addMark(); }
-  if (e.key === 'Escape') { closePop(); }
-});
+function showReplace() {
+  document.getElementById('replaceWrap').style.display = 'block';
+  setTimeout(() => document.getElementById('replaceInput').focus(), 60);
+}
 
-document.addEventListener('mousedown', e => {
-  if (!document.getElementById('popup').contains(e.target)) closePop();
-});
+function onReplaceKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); applyMark('replace'); }
+  if (e.key === 'Escape') closePop();
+}
 
-document.addEventListener('touchstart', e => {
-  if (!document.getElementById('popup').contains(e.target) && e.target.id !== 'pinput') closePop();
-}, { passive: true });
+function applyMark(type) {
+  if (!pending) return;
+  const comment = type === 'replace' ? document.getElementById('replaceInput').value.trim() : null;
+  if (type === 'replace' && !comment) { document.getElementById('replaceInput').focus(); return; }
 
-function addMark() {
-  if (!sel) return;
-  const val = document.getElementById('pinput').value.trim();
-  const type = val ? 'replace' : 'rework';
-  marks.push({ id: Date.now(), type, text: sel, comment: val || null });
-  highlight(sel, type);
+  const id = Date.now();
+  const span = document.createElement('span');
+  span.className = `mark mark-${type}`;
+  span.dataset.id = id;
+  span.onclick = () => focusEdit(id);
+
+  try {
+    pending.range.surroundContents(span);
+  } catch {
+    const frag = pending.range.extractContents();
+    span.appendChild(frag);
+    pending.range.insertNode(span);
+  }
+
+  marks.push({ id, type, text: pending.txt, comment });
+  window.getSelection()?.removeAllRanges();
   closePop();
   renderMarks();
-}
-
-function highlight(txt, type) {
-  const doc = document.getElementById('doc');
-  doc.innerHTML = doc.innerHTML.replace(txt, `<span class="${type}">${txt}</span>`);
+  document.getElementById('btnSubmit').disabled = false;
 }
 
 function closePop() {
   document.getElementById('popup').style.display = 'none';
-  window.getSelection()?.removeAllRanges();
-  sel = null;
+  pending = null;
 }
 
-function removeMark(id) {
-  marks = marks.filter(m => m.id !== id);
-  renderMarks();
-}
+document.addEventListener('mousedown', e => { if (!document.getElementById('popup').contains(e.target)) closePop(); });
+document.addEventListener('touchstart', e => { if (!document.getElementById('popup').contains(e.target)) closePop(); }, { passive: true });
+
+// Marks list
+const tagLabels = { rework:'Rework', replace:'Replace', vaag:'Vaag', stem:'Stem' };
+const outLabels = { rework:'REWORK', replace:'REPLACE', vaag:'VAAG', stem:'NIET MIJN STEM' };
 
 function renderMarks() {
-  const el = document.getElementById('marks');
+  const el = document.getElementById('marksList');
   if (!marks.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<strong style="font-size:12px;font-family:monospace">Marks (' + marks.length + ')</strong>' +
-    marks.map(m => `<div class="mark-item">
-      <span class="tag ${m.type === 'rework' ? 'r' : 'p'}">${m.type}</span>
-      <span class="mark-text">"${m.text.slice(0, 60)}"${m.comment ? ' → "' + m.comment + '"' : ''}</span>
-      <span class="del" onclick="removeMark(${m.id})">×</span>
+  el.innerHTML = `<div class="ml-header">Marks (${marks.length})</div>` +
+    marks.map(m => `<div class="mark-row">
+      <span class="mtag ${m.type}">${tagLabels[m.type]}</span>
+      <div class="mcontent">
+        <div class="mpreview">"${m.text.slice(0,65)}${m.text.length>65?'…':''}"</div>
+        ${m.comment ? `<div class="mcomment">→ ${m.comment}</div>` : ''}
+        <input class="medit-input" id="ei-${m.id}" value="${(m.comment||'').replace(/"/g,'&quot;')}" placeholder="Comment of vervanging..." onkeydown="onEditKey(event,${m.id})">
+      </div>
+      <div class="mbtns">
+        <button class="mibtn" id="eb-${m.id}" onclick="toggleEdit(${m.id})">✎</button>
+        <button class="mibtn del" onclick="deleteMark(${m.id})">×</button>
+      </div>
     </div>`).join('');
 }
 
-function submit() {
+function toggleEdit(id) {
+  const inp = document.getElementById(`ei-${id}`);
+  const btn = document.getElementById(`eb-${id}`);
+  if (inp.style.display === 'block') { saveEdit(id); return; }
+  inp.style.display = 'block';
+  btn.textContent = '✓';
+  inp.focus();
+}
+
+function onEditKey(e, id) {
+  if (e.key === 'Enter') { e.preventDefault(); saveEdit(id); }
+  if (e.key === 'Escape') { document.getElementById(`ei-${id}`).style.display = 'none'; document.getElementById(`eb-${id}`).textContent = '✎'; }
+}
+
+function saveEdit(id) {
+  const inp = document.getElementById(`ei-${id}`);
+  const m = marks.find(m => m.id === id);
+  if (m) m.comment = inp.value.trim() || null;
+  renderMarks();
+}
+
+function focusEdit(id) { toggleEdit(id); }
+
+function deleteMark(id) {
+  marks = marks.filter(m => m.id !== id);
+  const span = document.querySelector(`[data-id="${id}"]`);
+  if (span) span.replaceWith(...span.childNodes);
+  if (!marks.length) document.getElementById('btnSubmit').disabled = true;
+  renderMarks();
+}
+
+// Submit & copy
+function submitMarks() {
   if (!marks.length) return;
-  const lines = marks.map((m, i) => m.type === 'rework'
-    ? `${i + 1}. REWORK: "${m.text}"`
-    : `${i + 1}. REPLACE: "${m.text}" → "${m.comment}"`).join('\n');
+  const lines = marks.map((m,i) => {
+    let l = `${i+1}. ${outLabels[m.type]}: "${m.text}"`;
+    if (m.comment) l += ` → "${m.comment}"`;
+    return l;
+  }).join('\n');
   const out = 'MARKS:\n' + lines;
-  document.getElementById('output').textContent = out;
-  document.getElementById('output').style.display = 'block';
-  document.getElementById('btnCopy').style.display = 'inline-block';
-  document.getElementById('btnReset').style.display = 'inline-block';
+  const el = document.getElementById('output');
+  el.textContent = out;
+  el.style.display = 'block';
+  document.getElementById('btnCopy').style.display = 'inline-flex';
   window._out = out;
 }
 
 function copyOut() {
   navigator.clipboard.writeText(window._out || '');
-  document.getElementById('btnCopy').textContent = 'Gekopieerd!';
-  setTimeout(() => document.getElementById('btnCopy').textContent = 'Kopieer', 2000);
+  const btn = document.getElementById('btnCopy');
+  btn.textContent = 'Gekopieerd!';
+  btn.className = 'abtn abtn-success';
+  setTimeout(() => { btn.textContent = 'Kopieer'; btn.className = 'abtn abtn-secondary'; }, 2000);
 }
 
 function reset() {
-  document.getElementById('editorWrap').style.display = 'none';
-  document.getElementById('inputArea').style.display = 'block';
+  marks = [];
+  document.getElementById('editorPhase').style.display = 'none';
+  document.getElementById('inputPhase').style.display = 'block';
   document.getElementById('pasteArea').value = '';
   document.getElementById('output').style.display = 'none';
   document.getElementById('btnCopy').style.display = 'none';
-  document.getElementById('btnReset').style.display = 'none';
-  marks = [];
+  document.getElementById('btnSubmit').disabled = true;
+  renderMarks();
 }
 </script>
 </body>

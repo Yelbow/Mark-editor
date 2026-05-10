@@ -30,13 +30,31 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
 #inputPhase textarea{width:100%;min-height:160px;padding:14px;border:1px solid var(--border);border-radius:8px;font:15px/1.7 Georgia,serif;background:var(--surface);color:var(--text);resize:vertical;outline:none;transition:border-color .15s}
 #inputPhase textarea:focus{border-color:var(--text)}
 #inputPhase textarea::placeholder{color:var(--muted)}
-.load-btn{margin-top:10px;padding:11px 22px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font:13px monospace;cursor:pointer;letter-spacing:.5px;min-height:44px;transition:opacity .15s}
+.input-actions{display:flex;gap:8px;margin-top:10px}
+.load-btn{padding:11px 22px;background:var(--text);color:var(--bg);border:none;border-radius:6px;font:13px monospace;cursor:pointer;letter-spacing:.5px;min-height:44px;transition:opacity .15s}
 .load-btn:hover{opacity:.85}
+.clear-btn{padding:11px 18px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:6px;font:13px monospace;cursor:pointer;letter-spacing:.5px;min-height:44px;transition:all .15s}
+.clear-btn:hover{color:var(--text);border-color:var(--text)}
 
 /* Editor phase */
 #editorPhase{display:none}
 #wrap{position:relative}
-#doc{padding:22px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text;cursor:text;line-height:1.8}
+
+/* Doc container with copy button */
+.doc-container{position:relative}
+.copy-source-btn{
+  position:absolute;top:10px;right:10px;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:5px;padding:5px 10px;
+  font:11px monospace;color:var(--muted);
+  cursor:pointer;letter-spacing:.3px;
+  transition:all .15s;z-index:10;
+  opacity:0.7;
+}
+.copy-source-btn:hover{opacity:1;border-color:var(--text);color:var(--text)}
+.copy-source-btn.copied{color:#22c55e;border-color:#22c55e;opacity:1}
+
+#doc{padding:22px;padding-top:44px;border:1px solid var(--border);border-radius:8px;background:var(--surface);user-select:text;-webkit-user-select:text;cursor:text;line-height:1.8}
 #doc h1{font-size:1.5em;margin:0 0 12px}
 #doc h2{font-size:1.25em;margin:14px 0 8px}
 #doc h3{font-size:1.1em;margin:12px 0 6px}
@@ -51,25 +69,36 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
 .mark{border-radius:2px;cursor:pointer;transition:opacity .1s}
 .mark:hover{opacity:.8}
 .mark-rework{background:rgba(249,115,22,.15);border-bottom:2px solid #f97316}
-.mark-replace{background:rgba(59,130,246,.15);border-bottom:2px solid #3b82f6}
+.mark-comment{background:rgba(59,130,246,.15);border-bottom:2px solid #3b82f6}
 .mark-vaag{background:rgba(234,179,8,.18);border-bottom:2px solid #eab308}
 .mark-stem{background:rgba(168,85,247,.15);border-bottom:2px solid #a855f7}
 
 /* Popup */
 #popup{display:none;position:absolute;background:var(--popup);border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow);z-index:100;width:268px}
 .popup-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.mtype-btn{padding:11px 6px;border:none;border-radius:6px;cursor:pointer;font:12px monospace;letter-spacing:.3px;min-height:44px;color:#fff;transition:opacity .15s}
+.mtype-btn{padding:11px 6px;border:none;border-radius:6px;cursor:pointer;font:12px monospace;letter-spacing:.3px;min-height:44px;color:#fff;transition:opacity .15s;-webkit-user-select:none;user-select:none;}
 .mtype-btn:hover{opacity:.88}
 .mtype-btn.rework{background:#f97316}
-.mtype-btn.replace{background:#3b82f6}
+.mtype-btn.comment{background:#3b82f6}
 .mtype-btn.vaag{background:#eab308;color:#111}
 .mtype-btn.stem{background:#a855f7}
-#replaceWrap{display:none;margin-top:8px}
-#replaceWrap input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font:14px Georgia,serif;background:var(--bg);color:var(--text);outline:none}
-#replaceWrap input:focus{border-color:#3b82f6}
-#replaceOK{margin-top:6px;width:100%;padding:8px;background:#3b82f6;color:#fff;border:none;border-radius:5px;font:12px monospace;cursor:pointer;min-height:36px}
+#commentWrap{display:none;margin-top:8px}
+#commentWrap input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:5px;font:14px Georgia,serif;background:var(--bg);color:var(--text);outline:none}
+#commentWrap input:focus{border-color:#3b82f6}
+#commentOK{margin-top:6px;width:100%;padding:8px;background:#3b82f6;color:#fff;border:none;border-radius:5px;font:12px monospace;cursor:pointer;min-height:36px}
 .popup-cancel{display:block;text-align:center;margin-top:8px;font:11px monospace;color:var(--muted);cursor:pointer;letter-spacing:.5px}
 .popup-cancel:hover{color:var(--text)}
+
+/* Confirm dialog */
+#confirmOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:center;justify-content:center}
+#confirmOverlay.show{display:flex}
+#confirmBox{background:var(--popup);border:1px solid var(--border);border-radius:12px;padding:24px;box-shadow:var(--shadow);max-width:300px;width:90%;text-align:center}
+#confirmBox p{font:15px Georgia,serif;color:var(--text);margin-bottom:18px;line-height:1.5}
+.confirm-btns{display:flex;gap:8px;justify-content:center}
+.confirm-yes{padding:10px 22px;background:#ef4444;color:#fff;border:none;border-radius:6px;font:13px monospace;cursor:pointer;min-height:44px}
+.confirm-no{padding:10px 22px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;font:13px monospace;cursor:pointer;min-height:44px}
+.confirm-yes:hover{opacity:.88}
+.confirm-no:hover{border-color:var(--text)}
 
 /* Marks list */
 #marksList{margin-top:14px}
@@ -78,7 +107,7 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
 .mark-row:last-child{border-bottom:none}
 .mtag{font:10px monospace;padding:3px 7px;border-radius:3px;color:#fff;white-space:nowrap;margin-top:3px}
 .mtag.rework{background:#f97316}
-.mtag.replace{background:#3b82f6}
+.mtag.comment{background:#3b82f6}
 .mtag.vaag{background:#eab308;color:#111}
 .mtag.stem{background:#a855f7}
 .mcontent{flex:1;min-width:0}
@@ -111,26 +140,43 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
   <button class="theme-btn" onclick="toggleTheme()" title="Wissel thema">◐</button>
 </div>
 
+<!-- Confirm dialog -->
+<div id="confirmOverlay">
+  <div id="confirmBox">
+    <p id="confirmMsg">Weet je het zeker?</p>
+    <div class="confirm-btns">
+      <button class="confirm-yes" id="confirmYes">Ja, reset</button>
+      <button class="confirm-no" onclick="closeConfirm()">Annuleer</button>
+    </div>
+  </div>
+</div>
+
 <div id="inputPhase">
   <textarea id="pasteArea" placeholder="Plak hier de tekst van Claude. Markdown wordt ondersteund (# koppen, **vet**, _cursief_, lijsten)."></textarea>
-  <button class="load-btn" onclick="loadText()">Laad tekst →</button>
+  <div class="input-actions">
+    <button class="load-btn" onclick="loadText()">Laad tekst →</button>
+    <button class="clear-btn" onclick="requestClear()">Wis tekst</button>
+  </div>
 </div>
 
 <div id="editorPhase">
   <div id="wrap">
-    <div id="doc"></div>
+    <div class="doc-container">
+      <button class="copy-source-btn" id="copySourceBtn" onpointerdown="event.preventDefault()" onclick="copySource()">⎘ Kopieer origineel</button>
+      <div id="doc"></div>
+    </div>
     <div id="popup">
       <div class="popup-grid">
-        <button class="mtype-btn rework" onclick="applyMark('rework')">Rework</button>
-        <button class="mtype-btn replace" onclick="showReplace()">Replace</button>
-        <button class="mtype-btn vaag" onclick="applyMark('vaag')">Vaag</button>
-        <button class="mtype-btn stem" onclick="applyMark('stem')">Niet mijn stem</button>
+        <button class="mtype-btn rework" onpointerdown="event.preventDefault()" onclick="applyMark('rework')">Rework</button>
+        <button class="mtype-btn comment" onpointerdown="event.preventDefault()" onclick="showComment()">Comment</button>
+        <button class="mtype-btn vaag" onpointerdown="event.preventDefault()" onclick="applyMark('vaag')">Vaag</button>
+        <button class="mtype-btn stem" onpointerdown="event.preventDefault()" onclick="applyMark('stem')">Niet mijn stem</button>
       </div>
-      <div id="replaceWrap">
-        <input id="replaceInput" placeholder="Vervanging typen..." onkeydown="onReplaceKey(event)">
-        <button id="replaceOK" onclick="applyMark('replace')">OK</button>
+      <div id="commentWrap">
+        <input id="commentInput" placeholder="Typ je comment..." onkeydown="onCommentKey(event)">
+        <button id="commentOK" onpointerdown="event.preventDefault()" onclick="applyMark('comment')">OK</button>
       </div>
-      <span class="popup-cancel" onclick="closePop()">annuleer</span>
+      <span class="popup-cancel" onpointerdown="event.preventDefault()" onclick="closePop()">annuleer</span>
     </div>
   </div>
 
@@ -139,7 +185,7 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
   <div id="actionsBar">
     <button class="abtn abtn-primary" id="btnSubmit" onclick="submitMarks()" disabled>Submit marks</button>
     <button class="abtn abtn-secondary" id="btnCopy" style="display:none" onclick="copyOut()">Kopieer</button>
-    <button class="abtn abtn-secondary" onclick="reset()">Opnieuw</button>
+    <button class="abtn abtn-secondary" onclick="requestReset()">Opnieuw</button>
   </div>
 
   <div id="output"></div>
@@ -147,7 +193,8 @@ body{font:16px/1.75 'Georgia',serif;background:var(--bg);color:var(--text);max-w
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script>
-let marks = [], pending = null;
+let marks = [], pending = null, sourceText = '';
+let confirmCallback = null;
 
 // Theme
 function toggleTheme() {
@@ -158,17 +205,85 @@ function toggleTheme() {
   else delete dt.theme;
 }
 
+// Confirm dialog
+function showConfirm(msg, cb) {
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = cb;
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  confirmCallback = null;
+}
+document.getElementById('confirmYes').onclick = function() {
+  closeConfirm();
+  if (confirmCallback) confirmCallback();
+};
+document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeConfirm();
+});
+
+// Clear input (before load)
+function requestClear() {
+  const txt = document.getElementById('pasteArea').value.trim();
+  if (!txt) return;
+  showConfirm('Tekst wissen?', function() {
+    document.getElementById('pasteArea').value = '';
+  });
+}
+
+// Reset from editor
+function requestReset() {
+  if (marks.length > 0) {
+    showConfirm('Alle marks gaan verloren. Opnieuw beginnen?', doReset);
+  } else {
+    doReset();
+  }
+}
+
 // Load
 function loadText() {
   const txt = document.getElementById('pasteArea').value.trim();
   if (!txt) return;
+  sourceText = txt;
   document.getElementById('doc').innerHTML = marked.parse(txt);
   document.getElementById('inputPhase').style.display = 'none';
   document.getElementById('editorPhase').style.display = 'block';
+  attachDocListeners();
 }
 
-// Selection — fires on all platforms including iOS
-document.addEventListener('selectionchange', () => {
+// Copy original source
+function copySource() {
+  navigator.clipboard.writeText(sourceText).then(() => {
+    const btn = document.getElementById('copySourceBtn');
+    btn.textContent = '✓ Gekopieerd';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '⎘ Kopieer origineel';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// ── Selection / popup ────────────────────────────────────────────
+
+function attachDocListeners() {
+  const doc = document.getElementById('doc');
+
+  // Desktop: mouseup
+  doc.addEventListener('mouseup', function(e) {
+    // Small delay to let browser finalize selection
+    setTimeout(tryShowPopup, 10);
+  });
+
+  // Mobile: touchend
+  doc.addEventListener('touchend', function(e) {
+    // Longer delay on mobile; iOS needs time to settle selection handles
+    setTimeout(tryShowPopup, 50);
+  });
+}
+
+function tryShowPopup() {
   const s = window.getSelection();
   if (!s || s.isCollapsed || !s.rangeCount) return;
   const txt = s.toString().trim();
@@ -182,33 +297,32 @@ document.addEventListener('selectionchange', () => {
 
   pending = { txt, range };
 
-  // Always below selection; flip up if bottom of screen
   let top = rr.bottom - wr.top + window.scrollY + 8;
-  if (window.innerHeight - rr.bottom < 200) top = rr.top - wr.top + window.scrollY - 210;
+  if (window.innerHeight - rr.bottom < 220) top = rr.top - wr.top + window.scrollY - 220;
   const left = Math.max(0, Math.min(rr.left - wr.left, wr.width - 272));
 
   const p = document.getElementById('popup');
   p.style.top = top + 'px';
   p.style.left = left + 'px';
-  document.getElementById('replaceWrap').style.display = 'none';
-  document.getElementById('replaceInput').value = '';
+  document.getElementById('commentWrap').style.display = 'none';
+  document.getElementById('commentInput').value = '';
   p.style.display = 'block';
-});
-
-function showReplace() {
-  document.getElementById('replaceWrap').style.display = 'block';
-  setTimeout(() => document.getElementById('replaceInput').focus(), 60);
 }
 
-function onReplaceKey(e) {
-  if (e.key === 'Enter') { e.preventDefault(); applyMark('replace'); }
+function showComment() {
+  document.getElementById('commentWrap').style.display = 'block';
+  setTimeout(() => document.getElementById('commentInput').focus(), 60);
+}
+
+function onCommentKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); applyMark('comment'); }
   if (e.key === 'Escape') closePop();
 }
 
 function applyMark(type) {
   if (!pending) return;
-  const comment = type === 'replace' ? document.getElementById('replaceInput').value.trim() : null;
-  if (type === 'replace' && !comment) { document.getElementById('replaceInput').focus(); return; }
+  const comment = type === 'comment' ? document.getElementById('commentInput').value.trim() : null;
+  if (type === 'comment' && !comment) { document.getElementById('commentInput').focus(); return; }
 
   const id = Date.now();
   const span = document.createElement('span');
@@ -236,12 +350,21 @@ function closePop() {
   pending = null;
 }
 
-document.addEventListener('mousedown', e => { if (!document.getElementById('popup').contains(e.target)) closePop(); });
-document.addEventListener('touchstart', e => { if (!document.getElementById('popup').contains(e.target)) closePop(); }, { passive: true });
+// Close popup only when clicking/touching outside both popup and #doc
+document.addEventListener('mousedown', e => {
+  const popup = document.getElementById('popup');
+  const doc = document.getElementById('doc');
+  if (!popup.contains(e.target) && !doc.contains(e.target)) closePop();
+});
+document.addEventListener('touchstart', e => {
+  const popup = document.getElementById('popup');
+  const doc = document.getElementById('doc');
+  if (!popup.contains(e.target) && !doc.contains(e.target)) closePop();
+}, { passive: true });
 
-// Marks list
-const tagLabels = { rework:'Rework', replace:'Replace', vaag:'Vaag', stem:'Stem' };
-const outLabels = { rework:'REWORK', replace:'REPLACE', vaag:'VAAG', stem:'NIET MIJN STEM' };
+// ── Marks list ───────────────────────────────────────────────────
+const tagLabels = { rework:'Rework', comment:'Comment', vaag:'Vaag', stem:'Stem' };
+const outLabels = { rework:'REWORK', comment:'COMMENT', vaag:'VAAG', stem:'NIET MIJN STEM' };
 
 function renderMarks() {
   const el = document.getElementById('marksList');
@@ -252,7 +375,7 @@ function renderMarks() {
       <div class="mcontent">
         <div class="mpreview">"${m.text.slice(0,65)}${m.text.length>65?'…':''}"</div>
         ${m.comment ? `<div class="mcomment">→ ${m.comment}</div>` : ''}
-        <input class="medit-input" id="ei-${m.id}" value="${(m.comment||'').replace(/"/g,'&quot;')}" placeholder="Comment of vervanging..." onkeydown="onEditKey(event,${m.id})">
+        <input class="medit-input" id="ei-${m.id}" value="${(m.comment||'').replace(/"/g,'&quot;')}" placeholder="Comment..." onkeydown="onEditKey(event,${m.id})">
       </div>
       <div class="mbtns">
         <button class="mibtn" id="eb-${m.id}" onclick="toggleEdit(${m.id})">✎</button>
@@ -292,7 +415,7 @@ function deleteMark(id) {
   renderMarks();
 }
 
-// Submit & copy
+// ── Output ───────────────────────────────────────────────────────
 function submitMarks() {
   if (!marks.length) return;
   const lines = marks.map((m,i) => {
@@ -316,8 +439,9 @@ function copyOut() {
   setTimeout(() => { btn.textContent = 'Kopieer'; btn.className = 'abtn abtn-secondary'; }, 2000);
 }
 
-function reset() {
+function doReset() {
   marks = [];
+  sourceText = '';
   document.getElementById('editorPhase').style.display = 'none';
   document.getElementById('inputPhase').style.display = 'block';
   document.getElementById('pasteArea').value = '';
